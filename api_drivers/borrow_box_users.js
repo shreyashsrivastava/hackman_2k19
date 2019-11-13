@@ -1,6 +1,7 @@
 var mongoose = require('mongoose')
 var express = require('express')
 var async = require("async");
+var _ = require('underscore')
 var promise = require('promise')
 const _inventory = require('./borrow_box_inventory')
 var router = express.Router()
@@ -9,6 +10,7 @@ var multer = require('multer')
 var img_dest = multer({
     dest: 'user_image_uploads/'
 })
+
 mongoose.set('debug', true);
 const _schema = mongoose.Schema({
     U_name: {
@@ -17,20 +19,37 @@ const _schema = mongoose.Schema({
         unique: true
     },
     U_pass: String,
-    U_profile_pic: Array,
+    U_profile_pic: String,
+    U_address:{
+        U_street:String,
+        U_college:String,
+        U_city:String,
+        U_type:String,
+    },
     User_box: Array,
     request_list: Array,
     request_box_list: Array,
     User_box_sync: Boolean,
     User_lend_box: Array
 }, {
-    collection: 'users'
+    collection: 'borrow_box_users'
 })
 const _users = mongoose.model('users', _schema);
-mongoose.connect('mongodb://localhost:5000/borrow_box_users', {
+mongoose.connect('mongodb://localhost:5000/borrow_box', {
     useNewUrlParser: true
 })
 
+if(_users){module.exports.db = _users;console.log(_users)}
+var auth = require('../auth/authHandler')
+router.use('/:_uname/:_sid/*',function(req,res,next){
+    console.log('okay')
+    var session = auth.session()
+    console.log(session)
+    var _obj = _.findWhere(session,{name:req.params._uname,sid:req.params._sid})
+    console.log(_obj)
+    if(_obj){next()}
+    else{res.send({err:"UNAUTH_ACCESS",data:null})}
+})
 function hashId(s) {
     return s.split("").reduce(function (a, b) {
         a = ((a << 5) - a) + b.charCodeAt(0);
@@ -288,4 +307,5 @@ router.post('/:_uname/:_sid/approve_request', function (req, res) {
 router.get('/*', function (req, res) {
     res.sendStatus(404)
 })
-module.exports = router
+
+module.exports.router = router
